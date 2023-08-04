@@ -1,18 +1,18 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
 
-var errRequestFailed = errors.New("Request failed")
+type result struct {
+	url    string
+	status string
+}
 
 func main() {
-
 	results := make(map[string]string)
-	c := make(chan string)
+	c := make(chan result)
 	urls := []string{
 		"https://www.airbnb.com/",
 		"https://www.google.com/",
@@ -26,41 +26,31 @@ func main() {
 	}
 
 	for _, url := range urls {
-		result := "Good"
-		err := hitURL(url)
 
-		if err != nil {
-			result = "Baby_Cat"
-		}
+		go hitURL(url, c)
 
-		results[url] = result
 	}
 
-	for url, result := range results {
-		fmt.Println(url, ": ", result)
+	for i := 0; i < len(urls); i++ {
+		result := <-c
+		results[result.url] = result.status
 	}
 
-	go COUNT("BABY_CAT", c)
-	go COUNT("NIGKRMAN", c)
+	for url, stauts := range results {
+		fmt.Println(url, stauts)
+	}
 
-	fmt.Println(<-c)
-	fmt.Println(<-c)
 }
 
-func hitURL(url string) error {
+func hitURL(url string, c chan<- result) {
 	fmt.Println("Hit URL: ", url)
 
 	rep, err := http.Get(url)
+	stare := "OK"
 
 	if err != nil || rep.StatusCode >= 400 {
-		return errRequestFailed
+		stare = "Filed"
 	}
-
-	return nil
-}
-
-func COUNT(name string, c chan string) {
-	time.Sleep(time.Second * 10)
-	c <- name + "cat"
+	c <- result{url: url, status: stare}
 
 }
